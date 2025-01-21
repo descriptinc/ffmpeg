@@ -1092,6 +1092,10 @@ int ist_filter_add(InputStream *ist, InputFilter *ifilter, int is_simple,
                 (opts->crop_top | opts->crop_bottom | opts->crop_left | opts->crop_right))
                 opts->flags |= IFILTER_FLAG_CROP;
         }
+        if (ist->force_cfr.num > 0 && ist->force_cfr.den > 0) {
+            opts->force_cfr = ist->force_cfr;
+            opts->flags |= IFILTER_FLAG_CFR;
+        }
     } else if (ist->par->codec_type == AVMEDIA_TYPE_SUBTITLE) {
         /* Compute the size of the canvas for the subtitles stream.
            If the subtitles codecpar has set a size, use it. Otherwise use the
@@ -1424,7 +1428,7 @@ static int ist_add(const OptionsContext *o, Demuxer *d, AVStream *st, AVDictiona
     AVCodecParameters *par = st->codecpar;
     DemuxStream *ds;
     InputStream *ist;
-    const char *framerate = NULL, *hwaccel_device = NULL;
+    const char *framerate = NULL, *hwaccel_device = NULL, *forcecfr = NULL;
     const char *hwaccel = NULL;
     const char *apply_cropping = NULL;
     const char *hwaccel_output_format = NULL;
@@ -1656,6 +1660,15 @@ static int ist_add(const OptionsContext *o, Demuxer *d, AVStream *st, AVDictiona
             if (ret < 0) {
                 av_log(ist, AV_LOG_ERROR, "Error parsing framerate %s.\n",
                        framerate);
+                return ret;
+            }
+        }
+
+        opt_match_per_stream_str(ist, &o->force_cfr, ic, st, &forcecfr);
+        if (forcecfr) {
+            ret = av_parse_video_rate(&ist->force_cfr, forcecfr);
+            if (ret < 0) {
+                av_log(ist, AV_LOG_ERROR, "Error parsing framerate %s.\n", forcecfr);
                 return ret;
             }
         }
