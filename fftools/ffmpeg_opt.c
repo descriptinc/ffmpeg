@@ -2097,6 +2097,8 @@ const OptionDef options[] = {
     { "filter_hw_device", OPT_TYPE_FUNC, OPT_FUNC_ARG | OPT_EXPERT,
         { .func_arg = opt_filter_hw_device },
         "set hardware device used when filtering", "device" },
-
+    { "force_cfr", OPT_TYPE_STRING, OPT_VIDEO | OPT_EXPERT | OPT_PERSTREAM | OPT_INPUT,
+        { .off = OFFSET(force_cfr) },
+        "set frame rate (Hz value, fraction or abbreviation)", "force_cfr" },
     { NULL, },
 };
