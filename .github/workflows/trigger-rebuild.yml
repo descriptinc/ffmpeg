@@ -1,0 +1,28 @@
+name: Trigger FFmpeg MTS Build
+
+on:
+  push:
+    tags:
+      - 'descript/7.1.2'
+
+permissions:
+  contents: read
+
+jobs:
+  trigger_rebuild:
+    name: Trigger rebuild in ffmpeg-mts-build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger repository dispatch
+        uses: peter-evans/repository-dispatch@v3
+        with:
+          token: ${{ secrets.FFMPEG_MTS_BUILD_TOKEN }}
+          repository: descriptinc/ffmpeg-mts-build
+          event-type: force-rebuild
+          client-payload: |
+            {
+              "ref": "${{ github.ref }}",
+              "sha": "${{ github.sha }}",
+              "triggered_by": "${{ github.repository }}",
+              "tag": "descript/7.1.2"
+            }
