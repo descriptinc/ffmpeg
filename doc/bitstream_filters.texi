@@ -953,6 +953,67 @@ This can be useful for debugging low-level stream issues.
 Supports AV1, H.264, H.265, (M)JPEG, MPEG-2 and VP9, but depending
 on the build only a subset of these may be available.
 
+@section trim
+
+Drop packets outside a given range, similar to the trim and atrim
+filters, but operating on packets instead of decoded frames.
+
+Packets are dropped until the start of the range is reached, then passed
+through until the end of the range, after which end of stream is signaled.
+
+When a @option{start_pts} or @option{end_pts} boundary falls inside a packet's
+lifetime, the packet is trimmed rather than dropped. For audio the trimmed
+samples are signaled with skip samples side data, leaving the timestamps and
+duration untouched; the decoder discards those samples on output. For other
+media types the packet timestamps and duration are shifted to match the
+requested range.
+
+Timepstamp-based options (PTS, DTS) can be mixed, for instance setting
+@option{start_pts} and @option{end_dts}. Only one of @option{end_dts},
+@option{end_pts} or @option{duration_ts} can be used. Packet-counting
+options are mutually exclusive with timestamp-based options.
+
+Note that packets are passed or dropped regardless of the underlying codec
+logic, so make sure you understand the consequences for your stream: cutting
+inside a GOP will produce undecodable video packets, while formats made of
+independent frames such as ADTS can be cut anywhere.
+
+It accepts the following parameters:
+@table @option
+@item start_pts
+Presentation timestamp of the first packet that should be passed, in stream
+time base. Packets with a lower pts are dropped; a packet straddling this
+value is trimmed at its start.
+
+@item end_pts
+Presentation timestamp of the first packet that should be dropped again, in
+stream time base. Signals end of stream when reached; a packet straddling this
+value is trimmed at its end.
+
+@item start_dts
+Same as @option{start_pts}, matched against packet dts.
+
+@item end_dts
+Same as @option{end_pts}, matched against packet dts.
+
+@item duration_ts
+Duration to keep @option{after start_pts} or @option{start_dts}, in stream
+time base
+
+@item start_pkt
+Index of the first packet that should be passed, counting from zero.
+Packets with a lower index are dropped.
+
+@item end_pkt
+Index of the first packet that should be dropped again, counting from zero.
+Signals end of stream when reached.
+@end table
+
+For example, to keep only the 10 first packets of an ADTS stream:
+@example
+ffmpeg -i INPUT.aac -c copy -bsf:a trim=end_pkt=10 OUTPUT.aac
+@end example
+
 @section truehd_core
 
 Extract the core from a TrueHD stream, dropping ATMOS data.

@@ -224,6 +224,28 @@ fate-ffmpeg-bsf-remove-e: CMD = transcode "mpeg" $(TARGET_SAMPLES)/mpeg2/matrixb
 FATE_SAMPLES_FFMPEG-$(call DEMMUX, APNG, FRAMECRC, SETTS_BSF PIPE_PROTOCOL) += fate-ffmpeg-setts-bsf
 fate-ffmpeg-setts-bsf: CMD = framecrc -i $(TARGET_SAMPLES)/apng/clock.png -c:v copy -bsf:v "setts=duration=if(eq(NEXT_PTS\,NOPTS)\,PREV_OUTDURATION\,(NEXT_PTS-PTS)/2):ts=PTS/2" -fflags +bitexact
 
+FATE_SAMPLES_FFMPEG-$(call DEMMUX, AAC, FRAMECRC, TRIM_BSF PIPE_PROTOCOL) += fate-ffmpeg-trim-bsf-all fate-ffmpeg-trim-bsf-pts fate-ffmpeg-trim-bsf-dts fate-ffmpeg-trim-bsf-pkt fate-ffmpeg-trim-bsf-dts-pts fate-ffmpeg-trim-bsf-pts-dts fate-ffmpeg-trim-bsf-pts-duration fate-ffmpeg-trim-bsf-dts-duration fate-ffmpeg-trim-bsf-pkt fate-ffmpeg-trim-bsf-samples
+fate-ffmpeg-trim-bsf-all: CMD = framecrc -i $(TARGET_SAMPLES)/audiomatch/tones_afconvert_16000_mono_aac_lc.adts -c:a copy -bsf:a trim
+fate-ffmpeg-trim-bsf-pts: CMD = framecrc -i $(TARGET_SAMPLES)/audiomatch/tones_afconvert_16000_mono_aac_lc.adts -c:a copy -bsf:a trim=start_pts=1806336:end_pts=18063360
+fate-ffmpeg-trim-bsf-dts: CMD = framecrc -i $(TARGET_SAMPLES)/audiomatch/tones_afconvert_16000_mono_aac_lc.adts -c:a copy -bsf:a trim=start_dts=3612672:end_dts=10838016
+fate-ffmpeg-trim-bsf-dts-pts: CMD = framecrc -i $(TARGET_SAMPLES)/audiomatch/tones_afconvert_16000_mono_aac_lc.adts -c:a copy -bsf:a trim=start_dts=3612672:end_pts=18063360
+fate-ffmpeg-trim-bsf-pts-dts: CMD = framecrc -i $(TARGET_SAMPLES)/audiomatch/tones_afconvert_16000_mono_aac_lc.adts -c:a copy -bsf:a trim=start_pts=1806336:end_dts=10838016
+fate-ffmpeg-trim-bsf-pts-duration: CMD = framecrc -i $(TARGET_SAMPLES)/audiomatch/tones_afconvert_16000_mono_aac_lc.adts -c:a copy -bsf:a trim=start_pts=1806336:duration_ts=1000
+fate-ffmpeg-trim-bsf-dts-duration: CMD = framecrc -i $(TARGET_SAMPLES)/audiomatch/tones_afconvert_16000_mono_aac_lc.adts -c:a copy -bsf:a trim=start_dts=3612672:duration_ts=1000
+fate-ffmpeg-trim-bsf-pkt: CMD = framecrc -i $(TARGET_SAMPLES)/audiomatch/tones_afconvert_16000_mono_aac_lc.adts -c:a copy -bsf:a trim=start_pkt=5:end_pkt=15
+fate-ffmpeg-trim-bsf-samples: CMD = framecrc -i $(TARGET_SAMPLES)/audiomatch/tones_afconvert_16000_mono_aac_lc.adts -c:a copy -bsf:a trim=start_pts=903168:end_pts=17160192
+
+FATE_SAMPLES_FFMPEG-$(call DEMMUX, MOV, FRAMECRC, TRIM_BSF PIPE_PROTOCOL) += fate-ffmpeg-trim-bsf-video-all fate-ffmpeg-trim-bsf-video-pts fate-ffmpeg-trim-bsf-video-dts fate-ffmpeg-trim-bsf-video-dts-pts fate-ffmpeg-trim-bsf-video-pts-dts fate-ffmpeg-trim-bsf-video-dts-duration fate-ffmpeg-trim-bsf-video-pts-duration fate-ffmpeg-trim-bsf-video-pkt fate-ffmpeg-trim-bsf-video-samples
+fate-ffmpeg-trim-bsf-video-all: CMD = framecrc -i $(TARGET_SAMPLES)/qtrle/aletrek-rle.mov -map 0:v:0 -c:v copy -bsf:v trim
+fate-ffmpeg-trim-bsf-video-pts: CMD = framecrc -i $(TARGET_SAMPLES)/qtrle/aletrek-rle.mov -map 0:v:0 -c:v copy -bsf:v trim=start_pts=60:end_pts=600
+fate-ffmpeg-trim-bsf-video-dts: CMD = framecrc -i $(TARGET_SAMPLES)/qtrle/aletrek-rle.mov -map 0:v:0 -c:v copy -bsf:v trim=start_dts=120:end_dts=360
+fate-ffmpeg-trim-bsf-video-dts-pts: CMD = framecrc -i $(TARGET_SAMPLES)/qtrle/aletrek-rle.mov -map 0:v:0 -c:v copy -bsf:v trim=start_dts=120:end_pts=600
+fate-ffmpeg-trim-bsf-video-pts-dts: CMD = framecrc -i $(TARGET_SAMPLES)/qtrle/aletrek-rle.mov -map 0:v:0 -c:v copy -bsf:v trim=start_pts=60:end_dts=360
+fate-ffmpeg-trim-bsf-video-dts-duration: CMD = framecrc -i $(TARGET_SAMPLES)/qtrle/aletrek-rle.mov -map 0:v:0 -c:v copy -bsf:v trim=start_dts=120:duration_ts=100
+fate-ffmpeg-trim-bsf-video-pts-duration: CMD = framecrc -i $(TARGET_SAMPLES)/qtrle/aletrek-rle.mov -map 0:v:0 -c:v copy -bsf:v trim=start_pts=60:duration_ts=100
+fate-ffmpeg-trim-bsf-video-pkt: CMD = framecrc -i $(TARGET_SAMPLES)/qtrle/aletrek-rle.mov -map 0:v:0 -c:v copy -bsf:v trim=start_pkt=5:end_pkt=15
+fate-ffmpeg-trim-bsf-video-samples: CMD = framecrc -i $(TARGET_SAMPLES)/qtrle/aletrek-rle.mov -map 0:v:0 -c:v copy -bsf:v trim=start_pts=30:end_pts=150
+
 FATE_TIME_BASE-$(call PARSERDEMDEC, MPEGVIDEO, MPEGPS, MPEG2VIDEO, MPEGVIDEO_DEMUXER MXF_MUXER) += fate-time_base
 fate-time_base: CMD = md5 -i $(TARGET_SAMPLES)/mpeg2/dvd_single_frame.vob -an -sn -c:v copy -r 25 -fflags +bitexact -f mxf
 
