@@ -412,15 +412,6 @@ static void read_lang_descr_tag(AVFormatContext *s, AVIOContext *pb,
     }
 
     if (descriptor && *descriptor) {
-#if FF_API_OLD_ID3V2_COMMENT
-        if (!strcmp(key, "comment")) {
-            av_log(s, AV_LOG_WARNING,
-                   "Deprecated: COMM descriptor '%s' used as metadata key. "
-                   "This will change in a future version.\n", descriptor);
-            av_dict_set(metadata, (const char *)descriptor, (const char *)dst,
-                        AV_DICT_DONT_OVERWRITE);
-        }
-#endif
         int descr_len = strlen((char *)descriptor);
         if (av_strnlen(language, 3) > 0)
             full_key = av_asprintf("%s-%s-%s", key, descriptor, language);
