@@ -17,5 +17,6 @@
 /mjpegenc_huffman
 /motion
 /mpeg12framerate
+/mpegaudiodec
 /rangecoder
 /snowenc

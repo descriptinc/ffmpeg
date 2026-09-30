@@ -33,6 +33,10 @@ fate-codec_desc: libavcodec/tests/codec_desc$(EXESUF)
 fate-codec_desc: CMD = run libavcodec/tests/codec_desc$(EXESUF)
 fate-codec_desc: CMP = null
 
+FATE_LIBAVCODEC-$(call ALLYES, MP2_ENCODER MP2_DECODER) += fate-mpegaudiodec-sample-rate-change
+fate-mpegaudiodec-sample-rate-change: libavcodec/tests/mpegaudiodec$(EXESUF)
+fate-mpegaudiodec-sample-rate-change: CMD = run libavcodec/tests/mpegaudiodec$(EXESUF)
+
 FATE_LIBAVCODEC-$(CONFIG_GOLOMB) += fate-golomb
 fate-golomb: libavcodec/tests/golomb$(EXESUF)
 fate-golomb: CMD = run libavcodec/tests/golomb$(EXESUF)

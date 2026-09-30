@@ -1310,6 +1310,7 @@ TESTPROGS-$(CONFIG_IDCTDSP)               += dct
 TESTPROGS-$(CONFIG_IIRFILTER)             += iirfilter
 TESTPROGS-$(CONFIG_MJPEG_ENCODER)         += mjpegenc_huffman
 TESTPROGS-$(HAVE_MMX)                     += motion
+TESTPROGS-$(CONFIG_MP2_DECODER)          += mpegaudiodec
 TESTPROGS-$(CONFIG_MPEGVIDEO)             += mpeg12framerate
 TESTPROGS-$(CONFIG_H264_METADATA_BSF)     += h264_levels
 TESTPROGS-$(CONFIG_HEVC_METADATA_BSF)     += h265_levels
