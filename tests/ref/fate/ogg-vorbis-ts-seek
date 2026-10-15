@@ -31,6 +31,7 @@ flags=K__
 [STREAM]
 codec_name=vorbis
 initial_padding=0
+seek_preroll=0
 DISPOSITION:default=0
 DISPOSITION:dub=0
 DISPOSITION:original=0
