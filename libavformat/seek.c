@@ -664,6 +664,36 @@ int av_seek_frame(AVFormatContext *s, int stream_index,
     return ret;
 }
 
+/**
+ * The pre-roll to leave before a seek target, in the units of the seek: the
+ * time base of the stream, or AV_TIME_BASE when no stream is given. Audio
+ * decoders need the frames before the target to produce reliable output at
+ * it, and declare how many samples in AVCodecParameters.seek_preroll.
+ */
+static int64_t seek_preroll(const AVFormatContext *s, int stream_index)
+{
+    int64_t preroll = 0;
+
+    for (unsigned i = 0; i < s->nb_streams; i++) {
+        const AVStream *st = s->streams[i];
+        const AVCodecParameters *par = st->codecpar;
+        AVRational unit;
+        int64_t v;
+
+        if (stream_index >= 0 && i != stream_index)
+            continue;
+        if (par->codec_type != AVMEDIA_TYPE_AUDIO || par->seek_preroll <= 0 ||
+            par->sample_rate <= 0)
+            continue;
+
+        unit = stream_index >= 0 ? st->time_base : AV_TIME_BASE_Q;
+        v = av_rescale_q(par->seek_preroll, (AVRational){ 1, par->sample_rate }, unit);
+        preroll = FFMAX(preroll, v);
+    }
+
+    return preroll;
+}
+
 int avformat_seek_file(AVFormatContext *s, int stream_index, int64_t min_ts,
                        int64_t ts, int64_t max_ts, int flags)
 {
@@ -678,6 +708,23 @@ int avformat_seek_file(AVFormatContext *s, int stream_index, int64_t min_ts,
     if (s->seek2any > 0)
         flags |= AVSEEK_FLAG_ANY;
     flags &= ~AVSEEK_FLAG_BACKWARD;
+
+    if (!(flags & (AVSEEK_FLAG_BYTE | AVSEEK_FLAG_FRAME))) {
+        int64_t preroll = seek_preroll(s, stream_index);
+
+        if (preroll > 0) {
+            // Land early enough to decode the pre-roll, without leaving the
+            // range the caller asked for or going before the start.
+            int64_t start = stream_index >= 0 ? s->streams[stream_index]->start_time
+                                              : s->start_time;
+            int64_t target = FFMAX(av_sat_sub64(ts, preroll), min_ts);
+
+            if (start != AV_NOPTS_VALUE)
+                target = FFMAX(target, FFMIN(start, ts));
+            ts     = target;
+            max_ts = FFMIN(max_ts, target);
+        }
+    }
 
     if (ffifmt(s->iformat)->read_seek2) {
         int ret;
