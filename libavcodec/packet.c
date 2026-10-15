@@ -22,6 +22,7 @@
 #include <string.h>
 
 #include "libavutil/avassert.h"
+#include "libavutil/avstring.h"
 #include "libavutil/avutil.h"
 #include "libavutil/container_fifo.h"
 #include "libavutil/mathematics.h"
@@ -315,6 +316,75 @@ const char *av_packet_side_data_name(enum AVPacketSideDataType type)
     case AV_PKT_DATA_GAIN_MAP_PARAMS:            return "Gain Map Parameters";
     }
     return NULL;
+}
+
+/**
+ * The handle of each side data type: a short name made of lower case letters,
+ * digits and underscores, that can be typed in the options of a filter.
+ * Every type has to have one, which the packet_side_data_handle test checks.
+ * A handle that has been released must not change.
+ */
+const char *ff_packet_side_data_handle(enum AVPacketSideDataType type)
+{
+    switch (type) {
+    case AV_PKT_DATA_PALETTE:                      return "palette";
+    case AV_PKT_DATA_NEW_EXTRADATA:                return "new_extradata";
+    case AV_PKT_DATA_PARAM_CHANGE:                 return "param_change";
+    case AV_PKT_DATA_H263_MB_INFO:                 return "h263_mb_info";
+    case AV_PKT_DATA_REPLAYGAIN:                   return "replaygain";
+    case AV_PKT_DATA_DISPLAYMATRIX:                return "display_matrix";
+    case AV_PKT_DATA_STEREO3D:                     return "stereo3d";
+    case AV_PKT_DATA_AUDIO_SERVICE_TYPE:           return "audio_service_type";
+    case AV_PKT_DATA_QUALITY_STATS:                return "quality_stats";
+    case AV_PKT_DATA_FALLBACK_TRACK:               return "fallback_track";
+    case AV_PKT_DATA_CPB_PROPERTIES:               return "cpb_properties";
+    case AV_PKT_DATA_SKIP_SAMPLES:                 return "skip_samples";
+    case AV_PKT_DATA_JP_DUALMONO:                  return "jp_dualmono";
+    case AV_PKT_DATA_STRINGS_METADATA:             return "strings_metadata";
+    case AV_PKT_DATA_SUBTITLE_POSITION:            return "subtitle_position";
+    case AV_PKT_DATA_MATROSKA_BLOCKADDITIONAL:     return "matroska_blockadditional";
+    case AV_PKT_DATA_WEBVTT_IDENTIFIER:            return "webvtt_identifier";
+    case AV_PKT_DATA_WEBVTT_SETTINGS:              return "webvtt_settings";
+    case AV_PKT_DATA_METADATA_UPDATE:              return "metadata_update";
+    case AV_PKT_DATA_MPEGTS_STREAM_ID:             return "mpegts_stream_id";
+    case AV_PKT_DATA_MASTERING_DISPLAY_METADATA:   return "mastering_display";
+    case AV_PKT_DATA_CONTENT_LIGHT_LEVEL:          return "content_light_level";
+    case AV_PKT_DATA_SPHERICAL:                    return "spherical";
+    case AV_PKT_DATA_A53_CC:                       return "a53_cc";
+    case AV_PKT_DATA_ENCRYPTION_INIT_INFO:         return "encryption_init_info";
+    case AV_PKT_DATA_ENCRYPTION_INFO:              return "encryption_info";
+    case AV_PKT_DATA_AFD:                          return "afd";
+    case AV_PKT_DATA_PRFT:                         return "prft";
+    case AV_PKT_DATA_ICC_PROFILE:                  return "icc_profile";
+    case AV_PKT_DATA_DOVI_CONF:                    return "dovi_conf";
+    case AV_PKT_DATA_S12M_TIMECODE:                return "s12m_timecode";
+    case AV_PKT_DATA_DYNAMIC_HDR10_PLUS:           return "hdr10_plus";
+    case AV_PKT_DATA_DYNAMIC_HDR_SMPTE_2094_APP5:  return "hdr_smpte_2094_app5";
+    case AV_PKT_DATA_AMBIENT_VIEWING_ENVIRONMENT:  return "ambient_viewing_environment";
+    case AV_PKT_DATA_IAMF_MIX_GAIN_PARAM:          return "iamf_mix_gain_param";
+    case AV_PKT_DATA_IAMF_DEMIXING_INFO_PARAM:     return "iamf_demixing_info_param";
+    case AV_PKT_DATA_IAMF_RECON_GAIN_INFO_PARAM:   return "iamf_recon_gain_info_param";
+    case AV_PKT_DATA_FRAME_CROPPING:               return "frame_cropping";
+    case AV_PKT_DATA_LCEVC:                        return "lcevc";
+    case AV_PKT_DATA_3D_REFERENCE_DISPLAYS:        return "3d_reference_displays";
+    case AV_PKT_DATA_RTCP_SR:                      return "rtcp_sr";
+    case AV_PKT_DATA_EXIF:                         return "exif";
+    case AV_PKT_DATA_HEVC_CONF:                    return "hevc_conf";
+    case AV_PKT_DATA_GAIN_MAP_PARAMS:              return "gain_map_params";
+    }
+    av_unreachable("Every side data type has a handle, see the packet_side_data_handle test");
+}
+
+int ff_packet_side_data_from_handle(const char *handle, size_t len)
+{
+    for (int type = 0; type < AV_PKT_DATA_NB; type++) {
+        const char *name = ff_packet_side_data_handle(type);
+
+        if (!strncmp(handle, name, len) && !name[len])
+            return type;
+    }
+
+    return AVERROR(EINVAL);
 }
 
 uint8_t *av_packet_pack_dictionary(const AVDictionary *dict, size_t *size)
