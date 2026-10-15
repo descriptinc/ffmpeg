@@ -27,4 +27,26 @@
 
 int ff_side_data_set_prft(AVPacket *pkt, int64_t timestamp);
 
+/**
+ * Get the handle of a side data type: a short, stable name made of lower case
+ * letters, digits and underscores, for use where a name has to be typed, such
+ * as in the options of a filter.
+ *
+ * Every type below AV_PKT_DATA_NB has one, which the packet_side_data_handle
+ * test checks. A handle that has been released must not change.
+ *
+ * @param type the side data type, which has to be valid
+ * @return the handle
+ */
+const char *ff_packet_side_data_handle(enum AVPacketSideDataType type);
+
+/**
+ * Get the side data type that has a handle.
+ *
+ * @param handle the handle, not necessarily null terminated
+ * @param len    length of the handle
+ * @return the type, or a negative AVERROR code if no type has this handle
+ */
+int ff_packet_side_data_from_handle(const char *handle, size_t len);
+
 #endif // AVCODEC_PACKET_INTERNAL_H
