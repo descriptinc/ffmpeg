@@ -1023,6 +1023,67 @@ ffmpeg -i INPUT -c:a copy -bsf:a setts=pts=DTS out.mkv
 Log basic packet information. Mainly useful for testing, debugging,
 and development.
 
+@section side_data
+Remove or modify the side data of packets.
+
+It accepts the following parameters:
+@table @option
+@item remove
+Set the side data types to remove, joined with @samp{+}. Each type is given
+by its handle, one of:
+@table @samp
+@item palette
+@item new_extradata
+@item param_change
+@item h263_mb_info
+@item replaygain
+@item display_matrix
+@item stereo3d
+@item audio_service_type
+@item quality_stats
+@item fallback_track
+@item cpb_properties
+@item skip_samples
+@item jp_dualmono
+@item strings_metadata
+@item subtitle_position
+@item matroska_blockadditional
+@item webvtt_identifier
+@item webvtt_settings
+@item metadata_update
+@item mpegts_stream_id
+@item mastering_display
+@item content_light_level
+@item spherical
+@item a53_cc
+@item encryption_init_info
+@item encryption_info
+@item afd
+@item prft
+@item icc_profile
+@item dovi_conf
+@item s12m_timecode
+@item hdr10_plus
+@item hdr_smpte_2094_app5
+@item ambient_viewing_environment
+@item iamf_mix_gain_param
+@item iamf_demixing_info_param
+@item iamf_recon_gain_info_param
+@item frame_cropping
+@item lcevc
+@item 3d_reference_displays
+@item rtcp_sr
+@item exif
+@item hevc_conf
+@item gain_map_params
+@end table
+@end table
+
+For example, to drop the display matrix and the replay gain of a stream:
+@example
+ffmpeg -i INPUT -c copy -bsf:v side_data=remove=display_matrix+replaygain output.mkv
+@end example
+
 @section smpte436m_to_eia608
 
 Convert from a @code{SMPTE_436M_ANC} data stream to a @code{EIA_608} stream,

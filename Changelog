@@ -175,6 +175,25 @@ version 9.0.1:
  avformat/iamf_parse: fix inverted subblock duration validation
  avcodec/get_buffer: use frame pixel format instead of context
  avformat/lcevc: add a log context parameter to all functions
+version <next>:
+- ASTC image encoding and decoding via libastcenc, with .astc and KTX 1.0 muxers and demuxers
+- extensively improved AAC encoder
+- APV Vulkan encoder
+- iTerm2 inline image protocol muxer
+- LCEVC payload merging bitstream filter
+- MVR demuxer
+- latticepal filter
+- DVD-Audio LPCM decoder and demuxing support
+- AVFoundation input device selection by unique ID and USB serial number
+- NVIDIA optical flow accelerated interpolation filter (vf_fruc_vulkan)
+- side_data bitstream filter
+- H.264 data partitioning support
+- DSD (dsd_msbf) encoder
+- Rhetorex ADPCM decoder
+- ADPCM IMA Citrix decoder
+- Panasonic RW2 decoder
+- xHE-AAC encoding via libfdk-xhe-aac
+- jpegapp bitstream filter
 
 
 version 9.0:
