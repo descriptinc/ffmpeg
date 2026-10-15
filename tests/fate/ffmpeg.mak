@@ -308,6 +308,19 @@ fate-ffmpeg-side-data-bsf-priming: CMD = framecrc -i $(TARGET_SAMPLES)/audiomatc
 FATE_SAMPLES_FFMPEG-$(call DEMMUX, MOV, FRAMECRC, SIDE_DATA_BSF PIPE_PROTOCOL) += fate-ffmpeg-side-data-bsf-remove
 fate-ffmpeg-side-data-bsf-remove: CMD = framecrc -i $(TARGET_SAMPLES)/audiomatch/tones_afconvert_16000_mono_aac_lc.m4a -c:a copy -bsf:a side_data=remove=skip_samples -frames:a 2
 
+# The counts and the reasons are set on the packet that has the side data, and
+# a packet that has none gets it for a value other than 0.
+FATE_SAMPLES_FFMPEG-$(call DEMMUX, MOV, FRAMECRC, SIDE_DATA_BSF PIPE_PROTOCOL) += fate-ffmpeg-side-data-bsf-skip-samples
+fate-ffmpeg-side-data-bsf-skip-samples: CMD = framecrc -i $(TARGET_SAMPLES)/audiomatch/tones_afconvert_16000_mono_aac_lc.m4a -c:a copy -bsf:a side_data=skip_samples.skip=100:skip_samples.skip_reason=3:skip_samples.discard_reason=4 -frames:a 2
+
+FATE_SAMPLES_FFMPEG-$(call DEMMUX, MOV, FRAMECRC, SIDE_DATA_BSF PIPE_PROTOCOL) += fate-ffmpeg-side-data-bsf-skip-samples-discard
+fate-ffmpeg-side-data-bsf-skip-samples-discard: CMD = framecrc -i $(TARGET_SAMPLES)/audiomatch/tones_afconvert_16000_mono_aac_lc.m4a -c:a copy -bsf:a side_data=skip_samples.discard=5 -frames:a 2
+
+# A value of 0 leaves a packet without the side data as it is, and clears it
+# in the packet that has it.
+FATE_SAMPLES_FFMPEG-$(call DEMMUX, MOV, FRAMECRC, SIDE_DATA_BSF PIPE_PROTOCOL) += fate-ffmpeg-side-data-bsf-skip-samples-zero
+fate-ffmpeg-side-data-bsf-skip-samples-zero: CMD = framecrc -i $(TARGET_SAMPLES)/audiomatch/tones_afconvert_16000_mono_aac_lc.m4a -c:a copy -bsf:a side_data=skip_samples.skip=0:skip_samples.discard=0 -frames:a 2
+
 # The composed skips cover 800 + 300 of the 1024 samples, leaving nothing.
 FATE_SAMPLES_FFMPEG-$(call DEMMUX, AAC, FRAMECRC, AAC_PARSER TRIM_BSF PIPE_PROTOCOL) += fate-ffmpeg-trim-bsf-skip-samples-empty
 fate-ffmpeg-trim-bsf-skip-samples-empty: CMD = framecrc -i $(TARGET_SAMPLES)/audiomatch/tones_afconvert_16000_mono_aac_lc.adts -c:a copy -bsf:a trim=start=3217536,trim=end=3083472

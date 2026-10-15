@@ -1116,11 +1116,27 @@ by its handle, one of:
 @item hevc_conf
 @item gain_map_params
 @end table
+
+@item skip_samples.skip
+@item skip_samples.discard
+Set the number of samples to skip at the start of the packet, or to discard at
+its end, in the skip samples side data. A packet without the side data gets it
+for a value other than 0. By default the value is left as it is.
+
+@item skip_samples.skip_reason
+@item skip_samples.discard_reason
+Set the reason of the skip, or of the discard, in the skip samples side data.
+It is a number between 0 and 255. By default the value is left as it is.
 @end table
 
 For example, to drop the display matrix and the replay gain of a stream:
 @example
 ffmpeg -i INPUT -c copy -bsf:v side_data=remove=display_matrix+replaygain output.mkv
+@end example
+
+To keep the last samples of an audio stream that the demuxer asks to discard:
+@example
+ffmpeg -i INPUT -c copy -bsf:a side_data=skip_samples.discard=0 output.mka
 @end example
 
 @section smpte436m_to_eia608
