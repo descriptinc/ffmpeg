@@ -1368,6 +1368,7 @@ TESTPROGS = avcodec                                                     \
             htmlsubtitles                                               \
             jpeg2000dwt                                                 \
             mathops                                                    \
+            packet_side_data_handle                                     \
 
 TESTPROGS-$(CONFIG_APV_DECODER)           += apv
 TESTPROGS-$(CONFIG_AV1_VAAPI_ENCODER)     += av1_levels
