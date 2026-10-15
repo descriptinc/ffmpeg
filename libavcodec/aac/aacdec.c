@@ -1344,6 +1344,13 @@ av_cold int ff_aac_decode_init(AVCodecContext *avctx)
         }
     }
 
+    /* Frames overlap, so the first one decoded after a seek is only reliable
+     * once the frame before it has been decoded. With SBR a frame is twice as
+     * many output samples. */
+    avctx->seek_preroll = (ac->oc[1].m4ac.frame_length_short ? 960 : 1024) *
+                          (ac->oc[1].m4ac.sbr == 1 &&
+                           ac->oc[1].m4ac.ext_sample_rate > ac->oc[1].m4ac.sample_rate ? 2 : 1);
+
     if (avctx->ch_layout.nb_channels > MAX_CHANNELS) {
         av_log(avctx, AV_LOG_ERROR, "Too many channels\n");
         return AVERROR_INVALIDDATA;
