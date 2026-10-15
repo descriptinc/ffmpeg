@@ -29,6 +29,7 @@ FATE_MOV_FFPROBE-$(call FRAMEMD5, MOV, H264, H264_PARSER) += fate-mov-neg-firstp
                    fate-mov-neg-firstpts-discard-vorbis \
                    fate-mov-aac-2048-priming \
                    fate-mov-aac-2048-priming-preroll \
+                   fate-mov-aac-2048-priming-seek-landing \
                    fate-mov-zombie \
                    fate-mov-init-nonkeyframe \
                    fate-mov-displaymatrix \
@@ -154,6 +155,9 @@ fate-mov-aac-2048-priming: CMD = run ffprobe$(PROGSSUF)$(EXESUF) -show_packets -
 
 # The container's priming and the pre-roll a seek needs are different things.
 fate-mov-aac-2048-priming-preroll: CMD = run ffprobe$(PROGSSUF)$(EXESUF) -show_entries stream=initial_padding,seek_preroll -print_format compact $(TARGET_SAMPLES)/mov/aac-2048-priming.mov
+
+# Where a seek lands.
+fate-mov-aac-2048-priming-seek-landing: CMD = run ffprobe$(PROGSSUF)$(EXESUF) -read_intervals 2.3%+\#3 -show_entries packet=pts,dts,duration -print_format compact $(TARGET_SAMPLES)/mov/aac-2048-priming.mov
 
 # Seeking into the stream must not drop samples to the container's priming.
 FATE_MOV-$(call FRAMECRC, MOV, AAC, PCM_F32LE_ENCODER ARESAMPLE_FILTER) += fate-mov-aac-2048-priming-seek
