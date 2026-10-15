@@ -311,6 +311,19 @@ fate-ffmpeg-side-data-bsf-select: CMD = framecrc -i $(TARGET_SAMPLES)/audiomatch
 FATE_SAMPLES_FFMPEG-$(call DEMMUX, MOV, FRAMECRC, SIDE_DATA_BSF PIPE_PROTOCOL) += fate-ffmpeg-side-data-bsf-select-none
 fate-ffmpeg-side-data-bsf-select-none: CMD = framecrc -i $(TARGET_SAMPLES)/audiomatch/tones_afconvert_16000_mono_aac_lc.m4a -c:a copy -bsf:a side_data=select=palette -frames:a 2
 
+# The counts and the reasons are set on the packet that has the side data, and
+# a packet that has none gets it for a value other than 0.
+FATE_SAMPLES_FFMPEG-$(call DEMMUX, MOV, FRAMECRC, SIDE_DATA_BSF PIPE_PROTOCOL) += fate-ffmpeg-side-data-bsf-skip-samples
+fate-ffmpeg-side-data-bsf-skip-samples: CMD = framecrc -i $(TARGET_SAMPLES)/audiomatch/tones_afconvert_16000_mono_aac_lc.m4a -c:a copy -bsf:a side_data=skip_samples.skip=100:skip_samples.skip_reason=3:skip_samples.discard_reason=4 -frames:a 2
+
+FATE_SAMPLES_FFMPEG-$(call DEMMUX, MOV, FRAMECRC, SIDE_DATA_BSF PIPE_PROTOCOL) += fate-ffmpeg-side-data-bsf-skip-samples-discard
+fate-ffmpeg-side-data-bsf-skip-samples-discard: CMD = framecrc -i $(TARGET_SAMPLES)/audiomatch/tones_afconvert_16000_mono_aac_lc.m4a -c:a copy -bsf:a side_data=skip_samples.discard=5 -frames:a 2
+
+# A value of 0 leaves a packet without the side data as it is, and clears it
+# in the packet that has it.
+FATE_SAMPLES_FFMPEG-$(call DEMMUX, MOV, FRAMECRC, SIDE_DATA_BSF PIPE_PROTOCOL) += fate-ffmpeg-side-data-bsf-skip-samples-zero
+fate-ffmpeg-side-data-bsf-skip-samples-zero: CMD = framecrc -i $(TARGET_SAMPLES)/audiomatch/tones_afconvert_16000_mono_aac_lc.m4a -c:a copy -bsf:a side_data=skip_samples.skip=0:skip_samples.discard=0 -frames:a 2
+
 # The display matrix is stream side data, which ffprobe shows on the output.
 # Removing another type keeps it.
 FATE_SAMPLES_FFMPEG_FFPROBE-$(call REMUX, MOV, SIDE_DATA_BSF) += fate-ffmpeg-side-data-bsf-keep-stream
