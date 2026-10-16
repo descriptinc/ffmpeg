@@ -1,0 +1,13 @@
+90733b51c7218c64e7dc8ce80349142a *tests/data/fate/mpeg2-reserved-color-tags.mpeg2video
+268865 tests/data/fate/mpeg2-reserved-color-tags.mpeg2video
+#tb 0: 1/30
+#media_type 0: video
+#codec_id 0: rawvideo
+#dimensions 0: 720x480
+#sar 0: 8/9
+0,          0,          0,        1,   518400, 0xaccb5f9e
+0,          1,          1,        1,   518400, 0xf3177385
+0,          2,          2,        1,   518400, 0xee9adfdf
+color_space=unknown
+color_primaries=reserved
+color_transfer=reserved
