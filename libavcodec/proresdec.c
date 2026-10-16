@@ -31,6 +31,7 @@
 #include "libavutil/internal.h"
 #include "libavutil/mem.h"
 #include "libavutil/mem_internal.h"
+#include "libavutil/pixdesc.h"
 
 #include "avcodec.h"
 #include "codec_internal.h"
@@ -280,9 +281,14 @@ static int decode_frame_header(ProresContext *ctx, const uint8_t *buf,
 #endif
     }
 
-    avctx->color_primaries = buf[14];
-    avctx->color_trc       = buf[15];
-    avctx->colorspace      = buf[16];
+    // 0 is "unknown" in the frame header, and writers can leave other values
+    // the swscale tag checks reject; report those as unspecified.
+    avctx->color_primaries = buf[14] != AVCOL_PRI_RESERVED0 && buf[14] != AVCOL_PRI_RESERVED &&
+                             av_color_primaries_name(buf[14]) ? buf[14] : AVCOL_PRI_UNSPECIFIED;
+    avctx->color_trc       = buf[15] != AVCOL_TRC_RESERVED0 && buf[15] != AVCOL_TRC_RESERVED &&
+                             av_color_transfer_name(buf[15]) ? buf[15] : AVCOL_TRC_UNSPECIFIED;
+    avctx->colorspace      = buf[16] != AVCOL_SPC_RESERVED &&
+                             av_color_space_name(buf[16]) ? buf[16] : AVCOL_SPC_UNSPECIFIED;
     avctx->color_range     = AVCOL_RANGE_MPEG;
 
     ptr   = buf + 20;

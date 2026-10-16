@@ -8,5 +8,5 @@ e4853a743034c6eff8c099eff0b0401d *tests/data/fate/prores-unknown-color-tags.mov
 0,          0,          0,        1,  8294400, 0x007ba770
 0,          1,          1,        1,  8294400, 0x007ba770
 color_space=bt709
-color_primaries=reserved
-color_transfer=reserved
+color_primaries=unknown
+color_transfer=unknown
