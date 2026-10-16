@@ -43,6 +43,12 @@ FATE_MOV_FFPROBE-$(call FRAMEMD5, MOV, MPEG4, H264_PARSER) += fate-mov-mp4-exten
 
 FATE_MOV_FFPROBE-$(call DEMDEC, MOV, HEVC) += fate-mov-dovi-hvce-mp4-read
 
+# vpcC set to 3/3/3, with no colr box
+FATE_MOV_FFPROBE-$(call DEMDEC, MOV, VP9) += fate-mov-vpcc-reserved-color-tags
+fate-mov-vpcc-reserved-color-tags: CMD = run ffprobe$(PROGSSUF)$(EXESUF) -v error \
+    -show_entries stream=color_primaries,color_transfer,color_space -of default=nw=1 \
+    $(TARGET_SAMPLES)/mov/vpcc-reserved-color-tags.mp4
+
 FATE_MOV_FASTSTART = fate-mov-faststart-4gb-overflow \
 
 FATE_SAMPLES_FFMPEG += $(FATE_MOV-yes) $(FATE_MOV_REMUX-yes)
@@ -273,6 +279,12 @@ fate-mov-dovi-hvce-mp4-to-mp4: CMD = transcode mov $(TARGET_SAMPLES)/mov/dovi-p7
 FATE_MOV_FFMPEG_FFPROBE_SAMPLES-$(call REMUX, MP4 MOV, MATROSKA_DEMUXER HEVC_DECODER) \
                           += fate-mov-dovi-hvce-mkv-to-mp4
 fate-mov-dovi-hvce-mkv-to-mp4: CMD = transcode matroska $(TARGET_SAMPLES)/mkv/dovi-p7-hvce.mkv mp4 "-map 0 -c copy -strict unofficial" "-map 0 -c copy" "-show_entries stream_side_data_list -select_streams v"
+
+# A colr box can carry reserved colour values; they must not reach the stream
+FATE_MOV_FFMPEG_FFPROBE_SAMPLES-$(call REMUX, MOV, QTRLE_DECODER) += fate-mov-colr-reserved-color-tags
+fate-mov-colr-reserved-color-tags: CMD = stream_remux mov $(TARGET_SAMPLES)/qtrle/aletrek-rle.mov "" mov \
+    "-map 0:v -frames:v 1 -color_primaries 3 -color_trc 3 -colorspace 3" "" "-c:v copy" \
+    "-select_streams v -show_entries stream=color_primaries,color_transfer,color_space -of default=nw=1"
 
 FATE_SAMPLES_FFMPEG_FFPROBE += $(FATE_MOV_FFMPEG_FFPROBE_SAMPLES-yes)
 FATE_SAMPLES_FFMPEG += $(FATE_MOV_FFMPEG_SAMPLES-yes)
