@@ -9,5 +9,5 @@
 0,          1,          1,        1,   518400, 0xf3177385
 0,          2,          2,        1,   518400, 0xee9adfdf
 color_space=unknown
-color_primaries=reserved
-color_transfer=reserved
+color_primaries=unknown
+color_transfer=unknown
