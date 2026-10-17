@@ -2,6 +2,12 @@ The last version increases of all libraries were on 2026-06-23.
 
 API changes, most recent first:
 
+2026-10-17 - 843e83ed2d - lavf 63.1.103 - avformat.h
+  avformat_seek_file() moves the target back by the largest
+  AVCodecParameters.seek_preroll of the audio streams, within the requested
+  range. This also applies to av_seek_frame() with a demuxer that only
+  implements read_seek2.
+
 2026-10-15 - ad74ac4cee - lavc 63.1.104 - avcodec.h
   AVCodecContext.seek_preroll may be set by the user on decoding, and the AAC
   decoder raises it to the pre-roll it needs.
