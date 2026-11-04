@@ -1286,6 +1286,7 @@ static void copy_input_samples(AACEncContext *s, const AVFrame *frame)
 static int aac_encode_frame(AVCodecContext *avctx, AVPacket *avpkt,
                             const AVFrame *frame, int *got_packet_ptr)
 {
+    int discard_padding;
     AACEncContext *s = avctx->priv_data;
     float **samples = s->planar_samples, *samples2, *la, *overlap;
     ChannelElement *cpe;
@@ -1738,6 +1739,19 @@ static int aac_encode_frame(AVCodecContext *avctx, AVPacket *avpkt,
     ret = ff_af_queue_remove(&s->afq, avctx->frame_size, avpkt);
     if (ret < 0)
         return ret;
+
+    /* The last frame is padded to the frame size; tell the decoder to
+     * discard the padding, as the duration alone only reaches the muxers
+     * that trim by it. */
+    discard_padding = avctx->frame_size - ff_samples_from_time_base(avctx, avpkt->duration);
+    if ((discard_padding < avctx->frame_size) != (avpkt->duration > 0))
+        return AVERROR(EINVAL);
+    if (discard_padding > 0) {
+        uint8_t *side_data = av_packet_new_side_data(avpkt, AV_PKT_DATA_SKIP_SAMPLES, 10);
+        if (!side_data)
+            return AVERROR(ENOMEM);
+        AV_WL32(side_data + 4, discard_padding);
+    }
 
     avpkt->flags |= AV_PKT_FLAG_KEY;
 
