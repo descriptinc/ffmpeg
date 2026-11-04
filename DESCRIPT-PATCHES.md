@@ -11,6 +11,7 @@ review), and re-run the checks listed in the last column.
 | `tests/fate: check colour tags with unknown or reserved values`, `avcodec/proresdec, avformat/mov: report reserved colour tags as unspecified`, `avcodec/mpeg12dec: ...`, `avcodec/mpeg4videodec: ...`, `avformat/mov: report reserved vpcC colour tags as unspecified` | [#25140](https://code.ffmpeg.org/FFmpeg/FFmpeg/pulls/25140) | open | Drop our five commits for the merged ones. Our `tests/fate/mov.mak` only keeps the two colour tag tests, the rest of the PR's hunks conflict with unrelated mov tests missing here. Three of its tests need samples that are not in the fate-suite yet (`mpeg4/reserved-color-tags.m4v`, `prores/color-tags-fallback.mov`, `mov/vpcc-reserved-color-tags.mp4`). Re-run a pair that failed with swscale `ENOTSUP` (see below). |
 | `avcodec/aac: zero the output of a missing channel element` | [#24641](https://code.ffmpeg.org/FFmpeg/FFmpeg/pulls/24641) | merged upstream | Disappears on the next rebase onto a release that contains it. |
 | `tests/fate/mov: seek in a fragmented file with a chapter track`, `avformat/mov: ignore discarded streams when placing the fragment position on seek`, `avformat/mov: keep the current sample when a fragment is inserted at it` | [#25695](https://code.ffmpeg.org/FFmpeg/FFmpeg/pulls/25695) (fMP4 seek with a chapter track) | merged upstream, the merged commits are the ones carried here | Disappears on the next rebase onto a release that contains it. The `memmove` size in `mov_read_trun` keeps 9.0's `sc->tts_count` where master uses `sti->nb_index_entries`. |
+| `avformat/mov: discard the trimmed samples of an Opus packet`, `avcodec/aacenc: attach the discard padding of the last frame`, `avcodec/mpegaudiodec: export the seek pre-roll`, `avformat/matroskadec: rebuild exact audio timestamps with AVFMT_FLAG_EXACT_TS`, `avformat/matroskaenc: pick a clock finer than a sample with AVFMT_FLAG_EXACT_TS`, `avcodec: add seek_preroll_mode, for a pre-roll that matches a continuous decode`, `avformat/mov: rebuild exact audio timestamps with AVFMT_FLAG_EXACT_TS` | sample-exact seeks (`AVFMT_FLAG_EXACT_TS`, `seek_preroll_mode`), upstream PRs to come | carried ahead of upstream review; lavc and lavf micro 63.1.105 | Replace with the merged commits, which may rename the flag, the option or the enum; `AVCodecContext` gains a trailing field, so regenerate the Rust bindings in `pkg-rust/libav/sys` on the build that carries it. Their FATE tests (`mov-mp4-opus-trim`, `matroska-opus-exact-ts`, `matroska-opus-exact-ts-remux`, `opus-seek-preroll-exact`, `mov-mp4-aac-exact-ts`, `mov-mp4-aac-sbr-exact-ts`) and the regenerated `gapless-mp3`, `concat-demuxer-simple2-lavf-ts` and MP2/MP3 seek refs pass on 9.0. |
 | HLS `EXT-X-START` parsing | [#25121](https://code.ffmpeg.org/FFmpeg/FFmpeg/pulls/25121) | open, not yet carried here | Add when the source branch is known. |
 
 ## Why each one exists
@@ -31,6 +32,14 @@ review), and re-run the checks listed in the last column.
   stream's current sample moved that stream back to the fragment's start. MTS seeks into such
   files decoded from the file start and timed out or returned the wrong segment (the
   2026-11-02 error-cache report).
+- **Sample-exact seeks (`AVFMT_FLAG_EXACT_TS`, `seek_preroll_mode`).** Container clocks
+  coarser than a sample (Matroska's 1 ms, MP4 tracks on a timescale other than the sample
+  rate) round packet timestamps, so a seek lands up to half a tick away from the sample it
+  names and the accumulated rounding drifts the track duration. With the flag the demuxers
+  rebuild audio timestamps from the packet lengths. `seek_preroll_mode=exact` asks a decoder
+  for the pre-roll after which its output equals a continuous decode (Opus: 500 ms), MP3
+  declares its bit-reservoir pre-roll, and Opus-in-MP4 and AAC-in-Matroska stop outputting
+  their trailing padding. Together they make MTS segment cuts match a continuous decode.
 
 ## After an upstream merge
 
