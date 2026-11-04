@@ -252,6 +252,7 @@ typedef struct MOVStreamContext {
     int *open_key_samples;
     int open_key_samples_count;
     uint32_t min_sample_duration;
+    int exact_audio;      ///< AVFMT_FLAG_EXACT_TS: timestamps are in samples, rebuilt from the packet length
 
     int nb_frames_for_fps;
     int64_t duration_for_fps;
