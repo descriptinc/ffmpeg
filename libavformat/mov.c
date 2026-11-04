@@ -12767,6 +12767,21 @@ static int get_eia608_packet(AVIOContext *pb, AVPacket *pkt, int src_size)
     return ret;
 }
 
+/** The samples an Opus packet decodes to, at 48 kHz, from its TOC. */
+static int opus_packet_samples(const uint8_t *data, int size)
+{
+    int config = data[0] >> 3, count = data[0] & 3, frames = 1;
+    int frame_samples = config < 12 ? FFMAX(480, 960 * (config & 3)) :
+                        config < 16 ? 480 << (config & 1) :
+                                      120 << (config & 3);
+
+    if (count == 3)
+        frames = size > 1 ? data[1] & 0x3F : 0;
+    else if (count)
+        frames = 2;
+    return frame_samples * frames;
+}
+
 static int mov_finalize_packet(AVFormatContext *s, AVStream *st, AVIndexEntry *sample,
                                 int64_t current_index, AVPacket *pkt)
 {
@@ -12809,6 +12824,21 @@ static int mov_finalize_packet(AVFormatContext *s, AVStream *st, AVIndexEntry *s
             ffstream(st)->first_discard_sample = av_sat_add64(pts, duration);
         if (!ffstream(st)->last_discard_sample)
             ffstream(st)->last_discard_sample  = total;
+    }
+
+    // Opus trims a packet by giving its sample a duration shorter than
+    // what the packet decodes to, at the end of the stream and wherever
+    // the muxer had padding to discard.
+    if (st->codecpar->codec_id == AV_CODEC_ID_OPUS && pkt->size > 0 && pkt->duration > 0) {
+        int64_t duration = av_rescale_q(pkt->duration, st->time_base, (AVRational){ 1, 48000 });
+        int samples = opus_packet_samples(pkt->data, pkt->size);
+
+        if (samples > duration) {
+            uint8_t *side = av_packet_new_side_data(pkt, AV_PKT_DATA_SKIP_SAMPLES, 10);
+            if (!side)
+                return AVERROR(ENOMEM);
+            AV_WL32(side + 4, samples - duration);
+        }
     }
 
     if (sc->tts_data && sc->tts_index < sc->tts_count) {

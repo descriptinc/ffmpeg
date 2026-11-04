@@ -205,6 +205,12 @@ fate-mov-t35-cdsc-track: CMD = run ffprobe$(PROGSSUF)$(EXESUF) -show_entries str
 
 fate-mov-t35-rndr-track: CMD = run ffprobe$(PROGSSUF)$(EXESUF) -show_entries stream_group=index,id,nb_streams,type:stream_group_stream=index,id,codec_name,codec_type,codec_tag_string,extradata_size $(TARGET_SAMPLES)/mov/mov-t35-rndr-track.mp4
 
+# Opus trims the end of the stream by shortening the last sample, which the
+# demuxer turns back into discard padding.
+FATE_MOV_FFMPEG-$(call TRANSCODE, OPUS, MP4 WAV, ANULLSRC_FILTER ARESAMPLE_FILTER) += fate-mov-mp4-opus-trim
+fate-mov-mp4-opus-trim: tests/data/asynth-44100-2.wav
+fate-mov-mp4-opus-trim: CMD = transcode wav tests/data/asynth-44100-2.wav mp4 "-filter_complex anullsrc=r=48000:cl=stereo:d=0.021[a] -map [a] -c:a opus -strict -2" "-c copy"
+
 FATE_MOV_FFMPEG_FFPROBE_SAMPLES-$(call REMUX, MP4 MOV, OGG_DEMUXER VORBIS_DECODER) \
                           += fate-mov-mp4-chapters
 fate-mov-mp4-chapters: CMD = transcode ogg $(TARGET_SAMPLES)/vorbis/vorbis_chapter_extension_demo.ogg mp4 "-c copy" "-c copy -t 0.1" "-show_chapters"
