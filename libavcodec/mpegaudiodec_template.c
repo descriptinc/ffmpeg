@@ -1555,6 +1555,28 @@ static int mp_decode_frame(MPADecodeContext *s, OUT_INT **samples,
     return nb_frames * 32 * sizeof(OUT_INT) * s->nb_channels;
 }
 
+/**
+ * The samples output after a seek before the output is reliable.
+ * The subband synthesis overlaps each frame with the one before. Layer 3
+ * also stores the main data of a frame up to 511 bytes (255 for the low
+ * sampling frequencies) before its header, in the bit reservoir, so the
+ * frames holding it are needed too. The reservoir spans the most frames
+ * when they are the smallest the sampling frequency allows, which a
+ * variable bit rate stream may reach at any point.
+ */
+static void update_seek_preroll(AVCodecContext *avctx, MPADecodeContext *s)
+{
+    int samples = s->layer == 1 ? 384 : s->lsf && s->layer == 3 ? 576 : 1152;
+    int frames  = 1;
+
+    if (s->layer == 3) {
+        int reservoir = s->lsf ? 255 : 511;
+        int min_bytes = s->lsf ? 72 * 8000 / s->sample_rate : 144 * 32000 / s->sample_rate;
+        frames += 2 + (reservoir + min_bytes - 1) / min_bytes;
+    }
+    avctx->seek_preroll = FFMAX(avctx->seek_preroll, frames * samples);
+}
+
 static int decode_frame(AVCodecContext *avctx, AVFrame *frame,
                         int *got_frame_ptr, AVPacket *avpkt)
 {
@@ -1600,7 +1622,9 @@ static int decode_frame(AVCodecContext *avctx, AVFrame *frame,
     if (s->frame_size <= 0) {
         av_log(avctx, AV_LOG_ERROR, "incomplete frame\n");
         return AVERROR_INVALIDDATA;
-    } else if (s->frame_size < buf_size) {
+    }
+    update_seek_preroll(avctx, s);
+    if (s->frame_size < buf_size) {
         av_log(avctx, AV_LOG_DEBUG, "incorrect frame size - multiple frames in buffer?\n");
         buf_size= s->frame_size;
     }
