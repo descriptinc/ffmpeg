@@ -22,6 +22,11 @@ fate-matroska-xiph-lacing: CMD = framecrc -i $(TARGET_SAMPLES)/mkv/xiph_lacing.m
 FATE_MATROSKA-$(call FRAMECRC, MATROSKA,, OPUS_PARSER) += fate-matroska-opus-exact-ts
 fate-matroska-opus-exact-ts: CMD = framecrc -fflags +exact_ts -i $(TARGET_SAMPLES)/mkv/codec_delay_opus.mkv -c copy
 
+# Muxed with exact timestamps, the file's clock is 10 us instead of 1 ms, so
+# the packets come back at -650, 1350, 3350... without the flag.
+FATE_MATROSKA_FFMPEG_FFPROBE-$(call REMUX, MATROSKA, OPUS_PARSER) += fate-matroska-opus-exact-ts-remux
+fate-matroska-opus-exact-ts-remux: CMD = transcode matroska $(TARGET_SAMPLES)/mkv/codec_delay_opus.mkv matroska "-fflags +exact_ts -c copy" "-c copy" "" "" "" "-fflags +exact_ts"
+
 # This tests that the Matroska demuxer correctly demuxes WavPack
 # without CodecPrivate; it also tests zlib compressed WavPack.
 FATE_MATROSKA-$(call FRAMECRC, MATROSKA,,  ZLIB) += fate-matroska-wavpack-missing-codecprivate
