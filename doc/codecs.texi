@@ -922,6 +922,19 @@ Possible values:
 @item straight
 @end table
 
+@item seek_preroll_mode @var{integer} (@emph{decoding,audio})
+How much pre-roll a seek needs. A decoder turns it into the pre-roll it
+declares, from what it knows of its codec.
+
+Possible values:
+@table @samp
+@item sufficient
+Enough for the output to be reliable, as the codec specifies: 80 ms for Opus.
+@item exact
+Enough for the output to match a continuous decode. The Opus decoder
+matches a continuous decode after 500 ms.
+@end table
+
 
 @item log_level_offset @var{integer}
 Set the log level offset.

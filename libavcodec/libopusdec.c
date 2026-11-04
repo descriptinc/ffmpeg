@@ -141,6 +141,12 @@ static av_cold int libopus_decode_init(AVCodecContext *avc)
     /* Decoder delay (in samples) at 48kHz */
     avc->delay = opus->pre_skip;
 
+    /* RFC 7845 asks for 80 ms of pre-roll for reliable output. The
+     * decoder's state keeps the output within 1 LSB of a continuous
+     * decode up to 350 ms; 500 ms leaves a margin. */
+    avc->seek_preroll = FFMAX(avc->seek_preroll,
+                              avc->seek_preroll_mode == AV_SEEK_PREROLL_EXACT ? 24000 : 3840);
+
     return 0;
 }
 
