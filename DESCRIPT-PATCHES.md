@@ -10,6 +10,7 @@ review), and re-run the checks listed in the last column.
 | `avcodec/packet: look up side data types by handle`, `tests/fate: check that every packet side data type has a handle`, `avcodec/bsf: add the side_data bitstream filter`, `avcodec/bsf/side_data: set the fields of skip samples` | [#25101](https://code.ffmpeg.org/FFmpeg/FFmpeg/pulls/25101) (`side_data` BSF) | open, review ongoing (a frame-filter-style selection mode was suggested) | Re-check the option names (`remove=a+b`, `skip_samples.discard`), the handle names, and the packet side data handle lookup. The planner flag `side_data=skip_samples.discard=0` lives in `services/media-evals-worker/src/activities/replay.ts` (`keepTrailingSamples`) and the pinned build in `pkg-rust/libav/sys/versions-ffmpeg9.txt` (monorepo); change them together with the new build. |
 | `tests/fate: check colour tags with unknown or reserved values`, `avcodec/proresdec, avformat/mov: report reserved colour tags as unspecified`, `avcodec/mpeg12dec: ...`, `avcodec/mpeg4videodec: ...`, `avformat/mov: report reserved vpcC colour tags as unspecified` | [#25140](https://code.ffmpeg.org/FFmpeg/FFmpeg/pulls/25140) | open | Drop our five commits for the merged ones. Our `tests/fate/mov.mak` only keeps the two colour tag tests, the rest of the PR's hunks conflict with unrelated mov tests missing here. Three of its tests need samples that are not in the fate-suite yet (`mpeg4/reserved-color-tags.m4v`, `prores/color-tags-fallback.mov`, `mov/vpcc-reserved-color-tags.mp4`). Re-run a pair that failed with swscale `ENOTSUP` (see below). |
 | `avcodec/aac: zero the output of a missing channel element` | [#24641](https://code.ffmpeg.org/FFmpeg/FFmpeg/pulls/24641) | merged upstream | Disappears on the next rebase onto a release that contains it. |
+| `tests/fate/mov: seek in a fragmented file with a chapter track`, `avformat/mov: ignore discarded streams when placing the fragment position on seek`, `avformat/mov: keep the current sample when a fragment is inserted at it` | [#25695](https://code.ffmpeg.org/FFmpeg/FFmpeg/pulls/25695) (fMP4 seek with a chapter track) | merged upstream, the merged commits are the ones carried here | Disappears on the next rebase onto a release that contains it. The `memmove` size in `mov_read_trun` keeps 9.0's `sc->tts_count` where master uses `sti->nb_index_entries`. |
 | HLS `EXT-X-START` parsing | [#25121](https://code.ffmpeg.org/FFmpeg/FFmpeg/pulls/25121) | open, not yet carried here | Add when the source branch is known. |
 
 ## Why each one exists
@@ -24,6 +25,12 @@ review), and re-run the checks listed in the last column.
   tags (`Unsupported input`, `ENOTSUP`); FFmpeg 7.1 ignored them. ProRes, H.264 in mov
   (`colr`) and VP9 in mov (`vpcC`) files carry such values in production. The fix follows
   `c80002aa81` upstream (`avcodec/h2645_vui`), which reports reserved values as unspecified.
+- **fMP4 seek with a chapter track (#25695).** With `use_mfra_for`, a seek in a fragmented
+  MP4 that carries a chapter track resumed reading from the first fragment, because the
+  discarded chapter track's seek placed the fragment position, and a fragment inserted at a
+  stream's current sample moved that stream back to the fragment's start. MTS seeks into such
+  files decoded from the file start and timed out or returned the wrong segment (the
+  2026-11-02 error-cache report).
 
 ## After an upstream merge
 
