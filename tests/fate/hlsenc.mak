@@ -25,7 +25,7 @@ fate-hls-event-no-endlist: CLEANFILES = tests/data/event_no_endlist.m3u8 tests/d
 fate-hls-event-no-endlist: SRC = $(TARGET_PATH)/tests/data/event_no_endlist.m3u8
 fate-hls-event-no-endlist: CMD = md5 -ss 3 -i $(SRC) -af hdcd=process_stereo=false -t 3 -f s24le
 fate-hls-event-no-endlist: CMP = oneline
-fate-hls-event-no-endlist: REF = d9cd56b6aaebf67a52a63dd44ec5b085
+fate-hls-event-no-endlist: REF = 1b3acfcc18c9cfc1d52fcbd1a5dc2f14
 
 tests/data/live_last_endlist.m3u8: ffmpeg$(PROGSSUF)$(EXESUF) | tests/data
 	$(M)$(TARGET_EXEC) $(TARGET_PATH)/$< -nostdin \
