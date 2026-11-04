@@ -17,6 +17,11 @@ fate-matroska-remux: REF = b9c7b650349972c9dce42ab79b472917
 FATE_MATROSKA-$(call FRAMECRC, MATROSKA,,  VORBIS_PARSER) += fate-matroska-xiph-lacing
 fate-matroska-xiph-lacing: CMD = framecrc -i $(TARGET_SAMPLES)/mkv/xiph_lacing.mka -c:a copy
 
+# With exact timestamps, the 6.5 ms pre-skip and the 20 ms packets are at
+# -312, 648, 1608... samples instead of the millisecond clock's 0, 14, 34...
+FATE_MATROSKA-$(call FRAMECRC, MATROSKA,, OPUS_PARSER) += fate-matroska-opus-exact-ts
+fate-matroska-opus-exact-ts: CMD = framecrc -fflags +exact_ts -i $(TARGET_SAMPLES)/mkv/codec_delay_opus.mkv -c copy
+
 # This tests that the Matroska demuxer correctly demuxes WavPack
 # without CodecPrivate; it also tests zlib compressed WavPack.
 FATE_MATROSKA-$(call FRAMECRC, MATROSKA,,  ZLIB) += fate-matroska-wavpack-missing-codecprivate
