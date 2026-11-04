@@ -440,6 +440,14 @@ typedef struct RcOverride{
  * structure field names for historic reasons or brevity.
  * sizeof(AVCodecContext) must not be used outside libav*.
  */
+/**
+ * How much pre-roll a seek needs. See AVCodecContext.seek_preroll_mode.
+ */
+enum AVSeekPrerollMode {
+    AV_SEEK_PREROLL_SUFFICIENT = 0, ///< enough for the output to be reliable, as the codec specifies
+    AV_SEEK_PREROLL_EXACT      = 1, ///< enough for the output to match a continuous decode
+};
+
 typedef struct AVCodecContext {
     /**
      * information on struct for av_log
@@ -1952,6 +1960,16 @@ typedef struct AVCodecContext {
      * - decoding: Set by user.
      */
     enum AVDiscard skip_pred;
+
+    /**
+     * How much pre-roll a seek needs, which a decoder turns into
+     * seek_preroll from what it knows of its codec: what the codec
+     * specifies as enough for reliable output, or what makes the output
+     * match a continuous decode.
+     * - decoding: set by user
+     * - encoding: unused
+     */
+    enum AVSeekPrerollMode seek_preroll_mode;
 } AVCodecContext;
 
 /**
