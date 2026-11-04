@@ -63,7 +63,9 @@ Rebuild the audio timestamps from the packet lengths, in a sample time base,
 where the container's clock is coarser than a sample. Matroska stores
 timestamps in milliseconds, so a 20 ms Opus packet after a 6.5 ms pre-skip is
 stored at 14 ms instead of 13.5 ms, and a cut at that timestamp lands 24
-samples off. With this flag, the demuxer counts the samples of the packets and
+samples off. An MP4 muxer that keeps a 48 kHz clock for 44.1 kHz AAC stores
+each 1024-sample packet as 1115 ticks, and the rounding accumulates to 6 ms
+after 15 s. With this flag, the demuxer counts the samples of the packets and
 only follows the stored timestamp when it departs from that count by more than
 the clock's rounding, which marks a real gap. When muxing, the Matroska muxer
 picks a clock finer than half a sample of every audio stream, 10 microseconds
