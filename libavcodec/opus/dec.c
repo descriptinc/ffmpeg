@@ -753,6 +753,13 @@ static av_cold int opus_decode_init(AVCodecContext *avctx)
             return AVERROR(ENOMEM);
     }
 
+
+    /* RFC 7845 asks for 80 ms of pre-roll for reliable output. The
+     * decoder's state, such as the energy prediction of CELT, keeps the
+     * output within 2 LSB of a continuous decode after 180 ms and within
+     * 1 LSB up to 350 ms; 500 ms leaves a margin. */
+    avctx->seek_preroll = FFMAX(avctx->seek_preroll,
+                                avctx->seek_preroll_mode == AV_SEEK_PREROLL_EXACT ? 24000 : 3840);
     return 0;
 }
 

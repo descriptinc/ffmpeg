@@ -42,6 +42,12 @@ FATE_OPUS_ENC-$(call FILTERFRAMECRC, ANULLSRC ARESAMPLE, OPUS_ENCODER) += fate-o
 fate-opus-enc-silence: CMD = framecrc -auto_conversion_filters -filter_complex "anullsrc=r=48000:cl=stereo:d=0.021" -c:a opus -strict -2
 
 FATE_SAMPLES_FFMPEG += $(FATE_OPUS)
+# With an exact pre-roll, the seek to 0.5 s lands 200 ms before it instead
+# of 80 ms, and the first packet skips 9600 samples.
+FATE_OPUS_SEEK-$(call FRAMECRC, MATROSKA, OPUS) += fate-opus-seek-preroll-exact
+fate-opus-seek-preroll-exact: CMD = framecrc -seek_preroll_mode exact -ss 0.5 -i $(TARGET_SAMPLES)/mkv/codec_delay_opus.mkv -c copy
+FATE_SAMPLES_FFMPEG += $(FATE_OPUS_SEEK-yes)
+
 FATE_FFMPEG += $(FATE_OPUS_ENC-yes)
 fate-opus-celt: $(FATE_OPUS_CELT-yes)
 fate-opus-hybrid: $(FATE_OPUS_HYBRID-yes)
