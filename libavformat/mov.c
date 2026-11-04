@@ -57,6 +57,7 @@
 #include "libavcodec/exif.h"
 #include "libavcodec/flac.h"
 #include "libavcodec/hevc/hevc.h"
+#include "libavcodec/mpeg4audio.h"
 #include "libavcodec/mpegaudiodata.h"
 #include "libavcodec/mpegaudiodecheader.h"
 #include "libavcodec/mlp_parse.h"
@@ -12365,6 +12366,77 @@ static void fix_stream_ids(AVFormatContext *s)
     }
 }
 
+/*
+ * AVFMT_FLAG_EXACT_TS: rebuild an audio track's timestamps in samples from
+ * the packet length. A sample duration is the packet length rounded to a
+ * container tick, and a muxer whose clock is coarser than a sample has every
+ * packet carry the same rounding, so the error accumulates along the track:
+ * 1024 samples at 44.1 kHz stored as 1115 ticks of a 48 kHz clock advertise
+ * 6 ms more than the packets decode to after 15 s. A run of samples whose
+ * durations are each within a tick of the packet length is contiguous; a
+ * larger difference is a gap, kept at its stored length.
+ */
+static void mov_setup_exact_timestamps(MOVContext *c, AVStream *st)
+{
+    MOVStreamContext *sc = st->priv_data;
+    FFStream *const sti = ffstream(st);
+    AVCodecParameters *par = st->codecpar;
+    AVRational tick = st->time_base, tb;
+    int rate = par->sample_rate, samples = par->frame_size;
+    int64_t ts, prev_tick, end;
+
+    // A full parser re-times the packets it splits or merges; fragments
+    // keep adding samples in the container's clock.
+    if (par->codec_type != AVMEDIA_TYPE_AUDIO || rate <= 0 || samples <= 0 ||
+        !sti->nb_index_entries || c->frag_index.nb_items || c->trex_data || sc->ctts_count ||
+        sti->need_parsing == AVSTREAM_PARSE_FULL ||
+        sti->need_parsing == AVSTREAM_PARSE_FULL_RAW)
+        return;
+    if (par->codec_id == AV_CODEC_ID_AAC) {
+        // SBR outputs the frame at the extension rate.
+        MPEG4AudioConfig cfg = { 0 };
+        if (avpriv_mpeg4audio_get_config2(&cfg, par->extradata, par->extradata_size, 1, c->fc) < 0)
+            return;
+        if (cfg.ext_sample_rate > cfg.sample_rate && cfg.sample_rate > 0)
+            samples = av_rescale(samples, cfg.ext_sample_rate, cfg.sample_rate);
+    }
+
+    tb = (AVRational){ 1, rate };
+    prev_tick = sti->index_entries[0].timestamp;
+    ts        = av_rescale_q(prev_tick, tick, tb);
+    sti->index_entries[0].timestamp = ts;
+    for (int i = 1; i < sti->nb_index_entries; i++) {
+        int64_t cur_tick = sti->index_entries[i].timestamp;
+        int64_t d = cur_tick - prev_tick;
+        if (FFABS(d * rate - (int64_t)samples * tick.den) <= rate)
+            ts += samples;
+        else
+            ts += av_rescale_q(d, tick, tb);
+        prev_tick = cur_tick;
+        sti->index_entries[i].timestamp = ts;
+    }
+    // The track ends with its last packet, unless an edit cuts it short.
+    end = ts + samples;
+    if (st->duration != AV_NOPTS_VALUE) {
+        int64_t d = st->duration - prev_tick;
+        st->duration = FFABS(d * rate - (int64_t)samples * tick.den) <= rate ?
+                       end : av_rescale_q(st->duration, tick, tb);
+    }
+    if (st->start_time != AV_NOPTS_VALUE)
+        st->start_time = av_rescale_q(st->start_time, tick, tb);
+    // mov_fix_index counts the samples an edit list skips in the container's
+    // clock.
+    if (!c->ignore_editlist && c->advanced_editlist && sc->elst_count &&
+        sti->skip_samples > 0) {
+        sti->skip_samples = av_rescale_q(sti->skip_samples, tick, tb);
+        par->initial_padding = sti->skip_samples;
+    }
+    sc->min_sample_duration = samples;
+    sc->time_scale  = rate;
+    sc->exact_audio = 1;
+    avpriv_set_pts_info(st, 64, 1, rate);
+}
+
 static int mov_read_header(AVFormatContext *s)
 {
     MOVContext *mov = s->priv_data;
@@ -12535,6 +12607,8 @@ static int mov_read_header(AVFormatContext *s)
             err = ff_replaygain_export(st, s->metadata);
             if (err < 0)
                 return err;
+            if (s->flags & AVFMT_FLAG_EXACT_TS)
+                mov_setup_exact_timestamps(mov, st);
             break;
         case AVMEDIA_TYPE_VIDEO:
             if (sc->display_matrix) {
@@ -12805,6 +12879,12 @@ static int mov_finalize_packet(AVFormatContext *s, AVStream *st, AVIndexEntry *s
                 pkt->duration = next_dts - pkt->dts;
         }
         pkt->pts = pkt->dts;
+    }
+    if (sc->exact_audio) {
+        // The sample table's durations are in the container's clock.
+        int64_t next_dts = (sc->current_sample < ffstream(st)->nb_index_entries) ?
+            ffstream(st)->index_entries[sc->current_sample].timestamp : st->duration;
+        pkt->duration = FFMAX(next_dts - pkt->dts, 0);
     }
 
     if (st->codecpar->codec_type == AVMEDIA_TYPE_AUDIO && !mov->fragment.found_tfhd &&

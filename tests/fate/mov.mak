@@ -211,6 +211,17 @@ FATE_MOV_FFMPEG-$(call TRANSCODE, OPUS, MP4 WAV, ANULLSRC_FILTER ARESAMPLE_FILTE
 fate-mov-mp4-opus-trim: tests/data/asynth-44100-2.wav
 fate-mov-mp4-opus-trim: CMD = transcode wav tests/data/asynth-44100-2.wav mp4 "-filter_complex anullsrc=r=48000:cl=stereo:d=0.021[a] -map [a] -c:a opus -strict -2" "-c copy"
 
+# A sample table whose durations are the packet length rounded up to the
+# container's clock: 1024 samples stored as 1025 ticks. With exact_ts the
+# demuxer counts the packets' samples instead.
+FATE_MOV_FFMPEG_SAMPLES-$(call REMUX, MP4 AAC, AAC_ADTSTOASC_BSF SETTS_BSF) += fate-mov-mp4-aac-exact-ts
+fate-mov-mp4-aac-exact-ts: CMD = transcode aac $(TARGET_SAMPLES)/aac/foo.aac mp4 "-c copy -bsf:a setts=time_base=1/44100:prescale=1:ts=N*1025:duration=1025" "-c copy" "" "" "-fflags +exact_ts"
+
+# HE-AAC: the sample table counts in the core rate, the packets decode to
+# 2048 samples at the extension rate.
+FATE_MOV_FFMPEG_SAMPLES-$(call FRAMECRC, MOV, AAC) += fate-mov-mp4-aac-sbr-exact-ts
+fate-mov-mp4-aac-sbr-exact-ts: CMD = framecrc -fflags +exact_ts -i $(TARGET_SAMPLES)/aac/al_sbr_cm_48_2.mp4 -c copy
+
 FATE_MOV_FFMPEG_FFPROBE_SAMPLES-$(call REMUX, MP4 MOV, OGG_DEMUXER VORBIS_DECODER) \
                           += fate-mov-mp4-chapters
 fate-mov-mp4-chapters: CMD = transcode ogg $(TARGET_SAMPLES)/vorbis/vorbis_chapter_extension_demo.ogg mp4 "-c copy" "-c copy -t 0.1" "-show_chapters"
