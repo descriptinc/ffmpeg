@@ -1504,6 +1504,14 @@ typedef struct AVFormatContext {
 #define AVFMT_FLAG_SORT_DTS    0x10000 ///< try to interleave outputted packets by dts (using this flag can slow demuxing down)
 #define AVFMT_FLAG_FAST_SEEK   0x80000 ///< Enable fast, but inaccurate seeks for some formats
 #define AVFMT_FLAG_AUTO_BSF   0x200000 ///< Add bitstream filters as requested by the muxer
+/**
+ * Timestamps identify the exact sample, not the nearest tick of the
+ * container's clock. When demuxing, a format whose clock is coarser than a
+ * sample rebuilds the audio timestamps from the packet lengths, in a sample
+ * time base. When muxing, a format that can choose its clock picks one fine
+ * enough for every sample.
+ */
+#define AVFMT_FLAG_EXACT_TS   0x400000
 
     /**
      * Maximum number of bytes read from input in order to determine stream

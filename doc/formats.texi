@@ -58,6 +58,14 @@ Do not fill in missing values in packet fields that can be exactly calculated.
 Disable AVParsers, this needs @code{+nofillin} too.
 @item sortdts
 Try to interleave output packets by DTS. At present, available only for AVIs with an index.
+@item exact_ts
+Rebuild the audio timestamps from the packet lengths, in a sample time base,
+where the container's clock is coarser than a sample. Matroska stores
+timestamps in milliseconds, so a 20 ms Opus packet after a 6.5 ms pre-skip is
+stored at 14 ms instead of 13.5 ms, and a cut at that timestamp lands 24
+samples off. With this flag, the demuxer counts the samples of the packets and
+only follows the stored timestamp when it departs from that count by more than
+the clock's rounding, which marks a real gap.
 @end table
 
 Possible values for output files:
