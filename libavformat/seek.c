@@ -714,7 +714,9 @@ static int64_t preroll_target(const AVFormatContext *s, int stream_index,
 int av_seek_frame(AVFormatContext *s, int stream_index,
                   int64_t timestamp, int flags)
 {
+    FFFormatContext *const si = ffformatcontext(s);
     int preroll_flag = flags & AVSEEK_FLAG_PREROLL;
+    int seek_preroll = si->seek_preroll;
     int64_t target = timestamp;
     int ret;
 
@@ -735,6 +737,8 @@ int av_seek_frame(AVFormatContext *s, int stream_index,
     if (preroll_flag && !(flags & (AVSEEK_FLAG_BYTE | AVSEEK_FLAG_FRAME)))
         target = preroll_target(s, stream_index, INT64_MIN, timestamp);
 
+    // Keep what avformat_seek_file() set when the seek comes from it.
+    si->seek_preroll |= !!preroll_flag;
     ret = seek_frame_internal(s, stream_index, target, flags);
     // Without a known start, the earlier target may come before the first
     // packet.
@@ -742,6 +746,7 @@ int av_seek_frame(AVFormatContext *s, int stream_index,
         target = timestamp;
         ret = seek_frame_internal(s, stream_index, timestamp, flags);
     }
+    si->seek_preroll = seek_preroll;
     if (ret >= 0 && preroll_flag)
         request_seek_discard(s, stream_index, target, flags | preroll_flag);
 
@@ -819,6 +824,7 @@ FF_ENABLE_DEPRECATION_WARNINGS
             target_max = av_sat_sub64(max_ts, av_sat_sub64(ts, target));
     }
 
+    ffformatcontext(s)->seek_preroll = !!preroll_flag;
     ret = seek_file(s, stream_index, min_ts, target, target_max, flags);
     // Without a known start, the earlier target may come before the first
     // packet.
@@ -826,6 +832,7 @@ FF_ENABLE_DEPRECATION_WARNINGS
         target = ts;
         ret = seek_file(s, stream_index, min_ts, ts, max_ts, flags);
     }
+    ffformatcontext(s)->seek_preroll = 0;
     if (ret >= 0)
         request_seek_discard(s, stream_index, target, flags | preroll_flag);
     return ret;
