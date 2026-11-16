@@ -13,6 +13,7 @@ review), and re-run the checks listed in the last column.
 | `tests/fate/mov: seek in a fragmented file with a chapter track`, `avformat/mov: ignore discarded streams when placing the fragment position on seek`, `avformat/mov: keep the current sample when a fragment is inserted at it` | [#25695](https://code.ffmpeg.org/FFmpeg/FFmpeg/pulls/25695) (fMP4 seek with a chapter track) | merged upstream, the merged commits are the ones carried here | Disappears on the next rebase onto a release that contains it. The `memmove` size in `mov_read_trun` keeps 9.0's `sc->tts_count` where master uses `sti->nb_index_entries`. |
 | `avformat/mov: discard the trimmed samples of an Opus packet`, `avcodec/aacenc: attach the discard padding of the last frame`, `avcodec/mpegaudiodec: export the seek pre-roll`, `avformat/matroskadec: rebuild exact audio timestamps with AVFMT_FLAG_EXACT_TS`, `avformat/matroskaenc: pick a clock finer than a sample with AVFMT_FLAG_EXACT_TS`, `avcodec: add seek_preroll_mode, for a pre-roll that matches a continuous decode`, `avformat/mov: rebuild exact audio timestamps with AVFMT_FLAG_EXACT_TS` | sample-exact seeks (`AVFMT_FLAG_EXACT_TS`, `seek_preroll_mode`), upstream PRs to come | carried ahead of upstream review; lavc and lavf micro 63.1.105 | Replace with the merged commits, which may rename the flag, the option or the enum; `AVCodecContext` gains a trailing field, so regenerate the Rust bindings in `pkg-rust/libav/sys` on the build that carries it. Their FATE tests (`mov-mp4-opus-trim`, `matroska-opus-exact-ts`, `matroska-opus-exact-ts-remux`, `opus-seek-preroll-exact`, `mov-mp4-aac-exact-ts`, `mov-mp4-aac-sbr-exact-ts`) and the regenerated `gapless-mp3`, `concat-demuxer-simple2-lavf-ts` and MP2/MP3 seek refs pass on 9.0. |
 | `avformat: add a seek_flags option`, `avformat: add AVSEEK_FLAG_PREROLL`, `avformat/seek: with AVSEEK_FLAG_PREROLL set, seek back by the pre-roll`, `fftools/ffplay: seek with the audio pre-roll` | [#25842](https://code.ffmpeg.org/FFmpeg/FFmpeg/pulls/25842) (opt-in pre-roll) | open; carried from the PR head `bc74cce352`, lavf micro 63.1.108. The PR's test commit and test hunks are not carried, 9.0 has no `tests/fate/preroll.mak`; `tests/ref/seek/mkv-codec-delay` is back to the 9.0.2 reference. FATE was not re-run. | Replace with the merged commits; the flag and option names may change in review. **A seek no longer moves back by the pre-roll unless the caller sets `seek_flags=preroll` or passes `AVSEEK_FLAG_PREROLL`** (`pkg-rust/libav/core/src/demux.rs` in the monorepo); without it `seek_preroll_mode` has no effect either. `AVFormatContext` gains a trailing field, so regenerate the Rust bindings in `pkg-rust/libav/sys`. |
+| `avformat/mov: with AVSEEK_FLAG_PREROLL set, seek to an H.264 key sample that recovers by the target` | H.264 intra refresh seek, upstream PR to come (it builds on #25842) | carried ahead of upstream review; lavf micro 63.1.109. No public struct changes, the Rust bindings need no regeneration. | Replace with the merged commit. FATE `mov-mp4-h264-intra-refresh-seek` (remuxes `h264/intra_refresh.h264`, no new sample). The SDK planner seeks video to the range start and relies on it (`pkg-rust/media-sdk/src/plan.rs` in the monorepo). |
 | HLS `EXT-X-START` parsing | [#25121](https://code.ffmpeg.org/FFmpeg/FFmpeg/pulls/25121) | open, not yet carried here | Add when the source branch is known. |
 
 ## Why each one exists
@@ -41,6 +42,20 @@ review), and re-run the checks listed in the last column.
   for the pre-roll after which its output equals a continuous decode (Opus: 500 ms), MP3
   declares its bit-reservoir pre-roll, and Opus-in-MP4 and AAC-in-Matroska stop outputting
   their trailing padding. Together they make MTS segment cuts match a continuous decode.
+
+- **H.264 intra refresh seek.** H.264 from low latency encoders (x264 `intra-refresh=1`)
+  has no IDR picture after the first one: its key samples are recovery points, and the
+  pictures decoded from one are whole `recovery_frame_cnt` reference pictures later. A seek
+  landed on the key sample before the target, and the decoder dropped the frames up to the
+  end of the recovery. With `seek_flags=preroll` the mov demuxer reads the NAL unit headers
+  and lands on a key sample whose recovered picture is presented by the target, reading the
+  headers of at most 300 samples. Seeking to every frame of a 20 s x264 `intra-refresh=1`
+  file, the output starts after the target for 321 of 465 targets before and 0 after
+  without B-frames, and for 465 before and 10 after with `bframes=3`: there the decoder
+  still drops the one or two frames that follow the recovered picture. Files whose key
+  samples are all IDR pictures seek as before, at the cost of one header read. On
+  `h264/intra_refresh.h264` the frames 236 to 293 decode differently from a recovery point
+  than from the start, with or without this change.
 
 ## After an upstream merge
 
