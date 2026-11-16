@@ -2598,6 +2598,11 @@ int av_seek_frame(AVFormatContext *s, int stream_index, int64_t timestamp,
  * may be left. max_ts moves back as much, unless it is INT64_MAX. If that
  * seek fails, the seek is done to ts.
  *
+ * With AVSEEK_FLAG_PREROLL, a demuxer may also land on an earlier keyframe
+ * when the pictures decoded from the one before ts are not whole at ts. The
+ * MP4/MOV demuxer does it for H.264 key samples that are recovery points
+ * and not IDR pictures, as with intra refresh.
+ *
  * The first packet read after a seek from an audio stream carries
  * AV_PKT_DATA_SKIP_SAMPLES side data to discard the rest of the priming
  * (AVCodecParameters.initial_padding) if the seek landed inside it. With

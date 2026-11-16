@@ -56,11 +56,14 @@
 #include "libavcodec/ac3tab.h"
 #include "libavcodec/exif.h"
 #include "libavcodec/flac.h"
+#include "libavcodec/golomb.h"
+#include "libavcodec/h264.h"
 #include "libavcodec/hevc/hevc.h"
 #include "libavcodec/mpeg4audio.h"
 #include "libavcodec/mpegaudiodata.h"
 #include "libavcodec/mpegaudiodecheader.h"
 #include "libavcodec/mlp_parse.h"
+#include "libavcodec/sei.h"
 #include "avformat.h"
 #include "internal.h"
 #include "avio_internal.h"
@@ -74,6 +77,7 @@
 #include "libavcodec/get_bits.h"
 #include "id3v1.h"
 #include "mov_chan.h"
+#include "nal.h"
 #include "replaygain.h"
 
 #if CONFIG_ZLIB
@@ -13205,6 +13209,154 @@ static int can_seek_to_key_sample(AVStream *st, int sample, int64_t requested_pt
     return 1;
 }
 
+/* How many samples a seek with AVSEEK_FLAG_PREROLL reads the headers of to
+ * find a key sample from which an H.264 stream is whole at the target. */
+#define MOV_H264_RECOVERY_MAX_SAMPLES 300
+
+/**
+ * Read the NAL unit headers of an H.264 sample, up to its first slice.
+ *
+ * @param recovery_frame_cnt set to recovery_frame_cnt when the sample has a
+ *                           recovery point SEI and is not an IDR picture,
+ *                           to 0 otherwise; may be NULL
+ * @return 1 for a reference picture, 0 for another one, < 0 when the sample
+ *         can not be read
+ */
+static int mov_h264_sample_is_ref(AVStream *st, int sample, int *recovery_frame_cnt)
+{
+    MOVStreamContext *sc = st->priv_data;
+    const AVCodecParameters *par = st->codecpar;
+    const AVIndexEntry *e = &ffstream(st)->index_entries[sample];
+    int64_t pos = e->pos, end = e->pos + e->size;
+    int nal_length_size = (par->extradata[4] & 3) + 1;
+    int cnt = 0;
+
+    if (avio_seek(sc->pb, pos, SEEK_SET) != pos)
+        return AVERROR(EIO);
+
+    while (pos + nal_length_size < end) {
+        uint32_t size = 0;
+        int header, type;
+
+        for (int i = 0; i < nal_length_size; i++)
+            size = size << 8 | avio_r8(sc->pb);
+        pos += nal_length_size;
+        if (!size || size > end - pos || avio_feof(sc->pb))
+            break;
+        header = avio_r8(sc->pb);
+        type   = header & 0x1f;
+
+        if (type == H264_NAL_SLICE || type == H264_NAL_IDR_SLICE) {
+            if (recovery_frame_cnt)
+                *recovery_frame_cnt = type == H264_NAL_IDR_SLICE ? 0 : cnt;
+            return !!(header & 0x60);
+        }
+        if (type == H264_NAL_SEI && recovery_frame_cnt && size <= 4096) {
+            uint8_t buf[4096], *rbsp;
+            uint32_t rbsp_size;
+
+            buf[0] = header;
+            if (avio_read(sc->pb, buf + 1, size - 1) != size - 1)
+                break;
+            rbsp = ff_nal_unit_extract_rbsp(buf, size, &rbsp_size, 1);
+            if (!rbsp)
+                return AVERROR(ENOMEM);
+            // sei_message(): each of the type and the size is a run of 0xff
+            // bytes and a last byte.
+            for (uint32_t i = 1; i + 2 <= rbsp_size;) {
+                unsigned payload_type = 0, payload_size = 0;
+
+                while (i < rbsp_size && rbsp[i] == 0xff)
+                    payload_type += rbsp[i++];
+                if (i < rbsp_size)
+                    payload_type += rbsp[i++];
+                while (i < rbsp_size && rbsp[i] == 0xff)
+                    payload_size += rbsp[i++];
+                if (i < rbsp_size)
+                    payload_size += rbsp[i++];
+                if (payload_size > rbsp_size - i)
+                    break;
+                if (payload_type == SEI_TYPE_RECOVERY_POINT) {
+                    GetBitContext gb;
+                    if (init_get_bits8(&gb, rbsp + i, payload_size) >= 0)
+                        cnt = get_ue_golomb_long(&gb);
+                    break;
+                }
+                i += payload_size;
+            }
+            av_free(rbsp);
+        } else
+            avio_skip(sc->pb, size - 1);
+        pos += size;
+    }
+
+    return AVERROR_INVALIDDATA;
+}
+
+/**
+ * An H.264 key sample that is not an IDR picture is a recovery point: the
+ * pictures decoded from it are whole from the reference picture that comes
+ * recovery_frame_cnt reference pictures later, as with the intra refresh of
+ * a low latency encoder. Look back for a key sample from which that picture
+ * is presented by the timestamp.
+ *
+ * @return that key sample, or the given one when there is none close enough
+ */
+static int mov_h264_recovery_seek(AVFormatContext *s, AVStream *st, int sample,
+                                  int64_t timestamp)
+{
+    const MOVStreamContext *sc = st->priv_data;
+    const AVCodecParameters *par = st->codecpar;
+    const FFStream *const sti = ffstream(st);
+
+    if (par->extradata_size < 7 || par->extradata[0] != 1 ||
+        !(sc->pb->seekable & AVIO_SEEKABLE_NORMAL) ||
+        sc->cenc.aes_ctr || sc->cenc.encryption_index ||
+        sc->cenc.default_encrypted_sample)
+        return sample;
+
+    for (int key = sample, scanned = 0;;) {
+        int cnt, i = key;
+
+        if (mov_h264_sample_is_ref(st, key, &cnt) < 0)
+            return sample;
+        // An IDR picture, or a key sample that declares no recovery.
+        if (!cnt)
+            return key;
+        // The sample of the recovered picture.
+        while (cnt > 0) {
+            int ref;
+
+            if (++i >= sti->nb_index_entries ||
+                sti->index_entries[i].timestamp > timestamp ||
+                ++scanned > MOV_H264_RECOVERY_MAX_SAMPLES ||
+                (ref = mov_h264_sample_is_ref(st, i, NULL)) < 0)
+                break;
+            cnt -= ref;
+        }
+        if (!cnt) {
+            int64_t pts = sti->index_entries[i].timestamp + sc->dts_shift;
+
+            if (i < sc->sample_offsets_count)
+                pts += sc->sample_offsets[i];
+            if (pts <= timestamp) {
+                if (key != sample)
+                    av_log(s, AV_LOG_DEBUG, "stream %d, sample %d recovers "
+                           "after the target, seeking to sample %d\n",
+                           st->index, sample, key);
+                return key;
+            }
+        }
+        if (scanned > MOV_H264_RECOVERY_MAX_SAMPLES)
+            return sample;
+
+        do {
+            if (!key--)
+                return sample;
+        } while (!(sti->index_entries[key].flags & AVINDEX_KEYFRAME));
+    }
+}
+
 static int mov_seek_stream(AVFormatContext *s, AVStream *st, int64_t timestamp, int flags)
 {
     MOVStreamContext *sc = st->priv_data;
@@ -13245,6 +13397,11 @@ static int mov_seek_stream(AVFormatContext *s, AVStream *st, int64_t timestamp, 
 
         timestamp = next_ts;
     }
+
+    if (ffformatcontext(s)->seek_preroll && sample > 0 &&
+        st->codecpar->codec_id == AV_CODEC_ID_H264 &&
+        st->discard < AVDISCARD_ALL && !(flags & AVSEEK_FLAG_ANY))
+        sample = mov_h264_recovery_seek(s, st, sample, timestamp);
 
     mov_current_sample_set(sc, sample);
     av_log(s, AV_LOG_TRACE, "stream %d, found sample %d\n", st->index, sc->current_sample);
