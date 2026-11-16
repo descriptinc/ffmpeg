@@ -118,6 +118,13 @@ typedef struct FFFormatContext {
     AVDictionary *id3v2_meta;
 
     int missing_streams;
+
+    /**
+     * Set while a seek with AVSEEK_FLAG_PREROLL runs, for a demuxer to land
+     * on a keyframe from which the pictures are whole at the target. The
+     * flag itself is not passed to the demuxer.
+     */
+    int seek_preroll;
 } FFFormatContext;
 
 static av_always_inline FFFormatContext *ffformatcontext(AVFormatContext *s)
