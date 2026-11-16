@@ -1,0 +1,12 @@
+154413cd0d59cbe14418cf6fcda5e8f3 *tests/data/fate/mov-mp4-h264-intra-refresh-seek.mp4
+547895 tests/data/fate/mov-mp4-h264-intra-refresh-seek.mp4
+#tb 0: 1/25
+#media_type 0: video
+#codec_id 0: rawvideo
+#dimensions 0: 320x240
+#sar 0: 0/1
+0,          1,          1,        1,   115200, 0x4e3a48f2
+0,          2,          2,        1,   115200, 0x84b01583
+0,          3,          3,        1,   115200, 0xdbe6fc01
+0,          4,          4,        1,   115200, 0x23e10206
+0,          5,          5,        1,   115200, 0x4d7004f0

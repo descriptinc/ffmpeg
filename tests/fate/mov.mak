@@ -188,6 +188,14 @@ fate-mov-mp4-aac-exact-ts: CMD = transcode aac $(TARGET_SAMPLES)/aac/foo.aac mp4
 FATE_MOV_FFMPEG_SAMPLES-$(call FRAMECRC, MOV, AAC) += fate-mov-mp4-aac-sbr-exact-ts
 fate-mov-mp4-aac-sbr-exact-ts: CMD = framecrc -fflags +exact_ts -i $(TARGET_SAMPLES)/aac/al_sbr_cm_48_2.mp4 -c copy
 
+# Seek with the pre-roll in H.264 with intra refresh: the key sample before
+# the target is a recovery point, the pictures decoded from it are whole 21
+# reference pictures later, after the target. The seek lands on the recovery
+# point before it and the output starts at the target.
+FATE_MOV_FFMPEG_SAMPLES-$(call REMUX, MP4 MOV, H264_DEMUXER H264_PARSER H264_DECODER) \
+                          += fate-mov-mp4-h264-intra-refresh-seek
+fate-mov-mp4-h264-intra-refresh-seek: CMD = transcode h264 $(TARGET_SAMPLES)/h264/intra_refresh.h264 mp4 "-c copy" "-frames:v 5" "" "" "-seek_flags preroll -ss 4.5"
+
 FATE_MOV_FFMPEG_FFPROBE_SAMPLES-$(call REMUX, MP4 MOV, OGG_DEMUXER VORBIS_DECODER) \
                           += fate-mov-mp4-chapters
 fate-mov-mp4-chapters: CMD = transcode ogg $(TARGET_SAMPLES)/vorbis/vorbis_chapter_extension_demo.ogg mp4 "-c copy" "-c copy -t 0.1" "-show_chapters"
