@@ -129,7 +129,8 @@ typedef struct MP3Context {
     MPADecodeHeader2 *hdr;
     MPADecodeHeader2 *xing_header;
     MPADecodeHeader2 *first_frame;
-    int delay;
+    int64_t delay;
+    int delay_done;
     int64_t padding;
 
     /* index of the audio stream */
@@ -389,12 +390,16 @@ static int mp3_write_audio_packet(AVFormatContext *s, AVPacket *pkt)
                                                 AV_PKT_DATA_SKIP_SAMPLES,
                                                 &side_data_size);
             if (side_data && side_data_size >= 10) {
+                uint32_t skip_samples   = AV_RL32(side_data);
                 uint32_t discard_padding = AV_RL32(side_data + 4);
-                /* Padding longer than a frame is spread over several packets. */
+                /* Delay and padding longer than a frame are spread over
+                 * several packets. */
+                if (!mp3->delay_done)
+                    mp3->delay += skip_samples;
+                mp3->delay_done |= !skip_samples;
                 mp3->padding = discard_padding ? mp3->padding + discard_padding : 0;
-                if (!mp3->delay)
-                    mp3->delay =  FFMAX((int64_t)AV_RL32(side_data) - 528 - 1, 0);
             } else {
+                mp3->delay_done = 1;
                 mp3->padding = 0;
             }
         }
@@ -509,6 +514,7 @@ static void mp3_update_xing(AVFormatContext *s)
     }
 
     /* write encoder delay/padding */
+    mp3->delay = FFMAX(mp3->delay - 528 - 1, 0);
     if (mp3->padding)
         mp3->padding += 528 + 1;
     if (mp3->delay >= 1 << 12) {
